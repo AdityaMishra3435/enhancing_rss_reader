@@ -1,0 +1,655 @@
+@startuml
+'
+' =====================================================
+' =============== 1) Core Interfaces ===================
+' =====================================================
+interface EntityManager
+
+
+abstract class BaseDao<T, C> {
+  + void findByCriteria(PaginatedList<T> list, C criteria, SortCriteria sortCriteria, FilterCriteria filterCriteria)
+  + List<T> findByCriteria(C criteria, SortCriteria sortCriteria, FilterCriteria filterCriteria)
+  + List<T> findByCriteria(C criteria)
+  + T findFirstByCriteria(C criteria)
+  # abstract QueryParam getQueryParam(C criteria, FilterCriteria filterCriteria)
+}
+
+class QueryParam {
+  - String queryString
+  - List<String> criteriaList
+  - Map<String, Object> parameterMap
+  - SortCriteria sortCriteria
+  - FilterCriteria filterCriteria
+  - List<String> groupByList
+  - ResultMapper resultMapper
+}
+
+QueryParam
+
+'---------------------
+' ResultMapper (abstract)
+'---------------------
+abstract class ResultMapper<T> {
+  + List<T> map(List<Object[]> rows)
+  + abstract T map(Object[] cols)
+  - Character characterValue(Object o)
+  - String characterValueAsString(Object o)
+  - String stringValue(Object o)
+  - Boolean booleanValue(Object o)
+  - Integer intValue(Object o)
+  - Long longValue(Object o)
+  - Float floatValue(Object o)
+  - Double doubleValue(Object o)
+  - BigDecimal bigDecimalValue(Object o)
+  - Date dateValue(Object o)
+  - String getString(Clob clob)
+  - String arrayValue(Object o)
+}
+
+'
+' =====================================================
+' =============== 3) ThreadLocalContext ================
+' =====================================================
+class ThreadLocalContext {
+  - EntityManager entityManager
+  + static ThreadLocalContext get()
+  + static void cleanup()
+  + boolean isInTransactionalContext()
+  + EntityManager getEntityManager()
+  + void setEntityManager(EntityManager entityManager)
+}
+
+ThreadLocalContext ..> EntityManager : uses
+
+'
+' =====================================================
+' =============== 4) User & Associated Classes =========
+' =====================================================
+
+'---------------------
+' User Entity
+'---------------------
+class User {
+  - String id
+  - String localeId
+  - String roleId
+  - String username
+  - String password
+  - String email
+  - String theme
+  - boolean displayTitleWeb
+  - boolean displayTitleMobile
+  - boolean displayUnreadWeb
+  - boolean displayUnreadMobile
+  - boolean narrowArticle
+  - boolean firstConnection
+  - Date createDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getLocaleId()
+  + void setLocaleId(String localeId)
+  + String getRoleId()
+  + void setRoleId(String roleId)
+  + String getUsername()
+  + void setUsername(String username)
+  + String getPassword()
+  + void setPassword(String password)
+  + String getEmail()
+  + void setEmail(String email)
+  + String getTheme()
+  + void setTheme(String theme)
+  + boolean isDisplayTitleWeb()
+  + void setDisplayTitleWeb(boolean displayTitleWeb)
+  + boolean isDisplayTitleMobile()
+  + void setDisplayTitleMobile(boolean displayTitleMobile)
+  + boolean isDisplayUnreadWeb()
+  + void setDisplayUnreadWeb(boolean displayUnreadWeb)
+  + boolean isDisplayUnreadMobile()
+  + void setDisplayUnreadMobile(boolean displayUnreadMobile)
+  + boolean isNarrowArticle()
+  + void setNarrowArticle(boolean narrowArticle)
+  + boolean isFirstConnection()
+  + void setFirstConnection(boolean firstConnection)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+'---------------------
+' UserUtil
+'---------------------
+class UserUtil {
+  + static String getUserName(User user)
+}
+
+UserUtil ..> User : retrieves username
+
+'---------------------
+' PasswordChangedEvent
+'---------------------
+class PasswordChangedEvent {
+  - User user
+
+  + User getUser()
+  + void setUser(User user)
+}
+
+PasswordChangedEvent --> User : "References the user"
+
+'---------------------
+' UserCreatedEvent
+'---------------------
+class UserCreatedEvent {
+  - User user
+
+  + User getUser()
+  + void setUser(User user)
+  + String toString()
+}
+
+' Composition means the event "cannot meaningfully exist" 
+' without the user, but it's somewhat debatable:
+UserCreatedEvent *-- User : "contains"
+
+'
+' =====================================================
+' =============== 5) AuthenticationToken ===============
+' =====================================================
+class AuthenticationToken {
+  - String id
+  - String userId
+  - boolean longLasted
+  - Date creationDate
+  - Date lastConnectionDate
+
+  + String getId()
+  + void setId(String id)
+  + String getUserId()
+  + void setUserId(String userId)
+  + boolean isLongLasted()
+  + void setLongLasted(boolean longLasted)
+  + Date getCreationDate()
+  + void setCreationDate(Date creationDate)
+  + Date getLastConnectionDate()
+  + void setLastConnectionDate(Date lastConnectionDate)
+  + String toString()
+}
+
+'---------------------
+' AuthenticationTokenDao
+'---------------------
+class AuthenticationTokenDao {
+  + AuthenticationToken get(String id)
+  + String create(AuthenticationToken authenticationToken)
+  + void delete(String authenticationTokenId)
+  + void deleteOldSessionToken(String userId)
+  + void updateLastConnectionDate(String id)
+}
+
+AuthenticationTokenDao ..> AuthenticationToken : manages
+AuthenticationTokenDao ..> EntityManager : uses
+ThreadLocalContext ..> AuthenticationTokenDao : optional ?
+
+'
+' =====================================================
+' =============== 6) BaseFunction & Role ===============
+' =====================================================
+
+'---------------------
+' BaseFunction
+'---------------------
+class BaseFunction {
+  - String id
+  + String getId()
+  + void setId(String id)
+  + String toString()
+}
+
+'---------------------
+' Role
+'---------------------
+class Role {
+  - String id
+  - String name
+  - Date createDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getName()
+  + void setName(String name)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+User "1" -- "0..*" Role : "assigned to"
+
+'
+' =====================================================
+' =============== 7) RoleBaseFunction ==================
+' =====================================================
+class RoleBaseFunction {
+  - String id
+  - String roleId
+  - String baseFunctionId
+  - Date createDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getRoleId()
+  + void setRoleId(String roleId)
+  + String getBaseFunctionId()
+  + void setBaseFunctionId(String baseFunctionId)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+Role "1" o-- "0..*" RoleBaseFunction : "assigns"
+BaseFunction "1" o-- "0..*" RoleBaseFunction : "belongs to"
+
+'---------------------
+' RoleBaseFunctionDao
+'---------------------
+class RoleBaseFunctionDao {
+  + Set<String> findByRoleId(String roleId)
+}
+
+RoleBaseFunctionDao --> Role : "retrieves role info"
+RoleBaseFunctionDao --> BaseFunction : "retrieves base function info"
+
+'
+' =====================================================
+' =============== 8) Locale & LocaleDao ================
+' =====================================================
+
+'---------------------
+' Locale
+'---------------------
+class Locale {
+  - String id
+  + String getId()
+  + void setId(String id)
+  + String toString()
+}
+
+' Example relationship: a User has localeId
+User --> Locale : "localeId (implied)"
+
+'---------------------
+' LocaleDao
+'---------------------
+class LocaleDao {
+  + Locale getById(String id)
+  + List<Locale> findAll()
+}
+
+LocaleDao --> Locale : manages
+
+'
+' =====================================================
+' =============== 9) Job & JobEvent Classes ============
+' =====================================================
+
+'---------------------
+' Job
+'---------------------
+class Job {
+  - String id
+  - String userId
+  - String name
+  - Date createDate
+  - Date startDate
+  - Date endDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getUserId()
+  + void setUserId(String userId)
+  + String getName()
+  + void setName(String name)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getStartDate()
+  + void setStartDate(Date startDate)
+  + Date getEndDate()
+  + void setEndDate(Date endDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+'---------------------
+' JobEvent
+'---------------------
+class JobEvent {
+  - String id
+  - String jobId
+  - String name
+  - String value
+  - Date createDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getJobId()
+  + void setJobId(String jobId)
+  + String getName()
+  + void setName(String name)
+  + String getValue()
+  + void setValue(String value)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+Job "1" o-- "0..*" JobEvent : "tracks"
+
+'---------------------
+' JobDao
+'---------------------
+class JobDao {
+  + String create(Job job)
+  + Job getActiveJob(String id)
+  + void delete(String id)
+  + Job update(Job job)
+  - QueryParam getQueryParam(JobCriteria criteria, FilterCriteria filterCriteria)
+}
+
+JobDao --> Job : "manages"
+
+'---------------------
+' JobEventDao
+'---------------------
+class JobEventDao {
+  + String create(JobEvent jobEvent)
+  + void delete(String id)
+  - QueryParam getQueryParam(JobEventCriteria criteria, FilterCriteria filterCriteria)
+}
+
+JobEventDao --> JobEvent : "manages"
+
+'
+' =====================================================
+' =============== 10) Criteria & DTO Classes ===========
+' =====================================================
+
+'---------------------
+' UserCriteria
+'---------------------
+class UserCriteria {
+  ' No attributes given except placeholder in doc
+}
+
+'---------------------
+' JobCriteria
+'---------------------
+class JobCriteria {
+  - String userId
+  + String getUserId()
+  + JobCriteria setUserId(String userId)
+}
+
+'---------------------
+' JobEventCriteria
+'---------------------
+class JobEventCriteria {
+  - String jobId
+  + String getJobId()
+  + JobEventCriteria setJobId(String jobId)
+}
+
+'---------------------
+' UserDto
+'---------------------
+class UserDto {
+  - String id
+  - String localeId
+  - String username
+  - String email
+  - Long createTimestamp
+
+  + String getId()
+  + void setId(String id)
+  + String getLocaleId()
+  + void setLocaleId(String localeId)
+  + String getUsername()
+  + void setUsername(String username)
+  + String getEmail()
+  + void setEmail(String email)
+  + Long getCreateTimestamp()
+  + void setCreateTimestamp(Long createTimestamp)
+}
+
+'---------------------
+' JobDto
+'---------------------
+class JobDto {
+  - String id
+  - String name
+  - String userId
+  - Long createTimestamp
+  - Long startTimestamp
+  - Long endTimestamp
+
+  + String getId()
+  + void setId(String id)
+  + String getName()
+  + void setName(String name)
+  + String getUserId()
+  + void setUserId(String userId)
+  + Long getCreateTimestamp()
+  + void setCreateTimestamp(Long ts)
+  + Long getStartTimestamp()
+  + void setStartTimestamp(Long ts)
+  + Long getEndTimestamp()
+  + void setEndTimestamp(Long ts)
+}
+
+'---------------------
+' JobEventDto
+'---------------------
+class JobEventDto {
+  - String id
+  - String name
+  - String value
+
+  + String getId()
+  + void setId(String id)
+  + String getName()
+  + void setName(String name)
+  + String getValue()
+  + void setValue(String value)
+}
+
+'---------------------
+' UserArticleDto
+'---------------------
+class UserArticleDto {
+  - String id
+  - Long readTimestamp
+  - Long starTimestamp
+  - String feedTitle
+  - String feedSubscriptionId
+  - String feedSubscriptionTitle
+  - String articleId
+  - String articleUrl
+  - String articleGuid
+  - String articleTitle
+  - String articleCreator
+  - String articleDescription
+  - String articleCommentUrl
+  - Integer articleCommentCount
+  - String articleEnclosureUrl
+  - Integer articleEnclosureLength
+  - String articleEnclosureType
+  - Long articlePublicationTimestamp
+
+  + String getId()
+  + void setId(String id)
+  + Long getReadTimestamp()
+  + void setReadTimestamp(Long readTimestamp)
+  + Long getStarTimestamp()
+  + void setStarTimestamp(Long starTimestamp)
+  + String getFeedTitle()
+  + void setFeedTitle(String feedTitle)
+  + String getFeedSubscriptionId()
+  + void setFeedSubscriptionId(String feedSubscriptionId)
+  + String getFeedSubscriptionTitle()
+  + void setFeedSubscriptionTitle(String feedSubscriptionTitle)
+  + String getArticleId()
+  + void setArticleId(String articleId)
+  + String getArticleUrl()
+  + void setArticleUrl(String articleUrl)
+  + String getArticleGuid()
+  + void setArticleGuid(String articleGuid)
+  + String getArticleTitle()
+  + void setArticleTitle(String articleTitle)
+  + String getArticleCreator()
+  + void setArticleCreator(String articleCreator)
+  + String getArticleDescription()
+  + void setArticleDescription(String articleDescription)
+  + String getArticleCommentUrl()
+  + void setArticleCommentUrl(String articleCommentUrl)
+  + Integer getArticleCommentCount()
+  + void setArticleCommentCount(Integer articleCommentCount)
+  + String getArticleEnclosureUrl()
+  + void setArticleEnclosureUrl(String articleEnclosureUrl)
+  + Integer getArticleEnclosureLength()
+  + void setArticleEnclosureLength(Integer articleEnclosureLength)
+  + String getArticleEnclosureType()
+  + void setArticleEnclosureType(String articleEnclosureType)
+  + Long getArticlePublicationTimestamp()
+  + void setArticlePublicationTimestamp(Long articlePublicationTimestamp)
+}
+
+'
+' =====================================================
+' =============== 11) Mappers ==========================
+' =====================================================
+
+'---------------------
+' UserMapper
+'---------------------
+class UserMapper {
+  + UserDto map(Object[] o)
+}
+
+ResultMapper <|-- UserMapper
+UserMapper --> UserDto
+
+'---------------------
+' JobMapper
+'---------------------
+class JobMapper {
+  + JobDto map(Object[] o)
+}
+
+ResultMapper <|-- JobMapper
+JobMapper --> JobDto
+
+'---------------------
+' JobEventMapper
+'---------------------
+class JobEventMapper {
+  + JobEventDto map(Object[] o)
+}
+
+ResultMapper <|-- JobEventMapper
+JobEventMapper --> JobEventDto
+
+'
+' =====================================================
+' =============== 12) UserArticle ======================
+' =====================================================
+
+'---------------------
+' Article (stub)
+'---------------------
+class Article {
+  - String id
+  - String title
+}
+
+'---------------------
+' UserArticle
+'---------------------
+class UserArticle {
+  - String id
+  - String userId
+  - String articleId
+  - Date createDate
+  - Date readDate
+  - Date starredDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getUserId()
+  + void setUserId(String userId)
+  + String getArticleId()
+  + void setArticleId(String articleId)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getReadDate()
+  + void setReadDate(Date readDate)
+  + Date getStarredDate()
+  + void setStarredDate(Date starredDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+User "1" --> "0..*" UserArticle : "interacts with"
+Article "1" --> "0..*" UserArticle : "is read by"
+
+'
+' =====================================================
+' =============== 13) UserDao ==========================
+' =====================================================
+
+class UserDao {
+  - List<String> criteriaList
+  - Map<String, Object> parameterMap
+  - StringBuilder sb
+
+  + QueryParam getQueryParam(UserCriteria criteria, FilterCriteria filterCriteria)
+  + String authenticate(String username, String password)
+  + String create(User user)
+  + User update(User user)
+  + User updatePassword(User user)
+  + User getById(String id)
+  + User getActiveByUsername(String username)
+  + User getActiveByPasswordResetKey(String passwordResetKey)
+  + void delete(String username)
+  - String hashPassword(String password)
+}
+
+BaseDao <|-- UserDao
+UserDao --> User : manages
+UserDao ..> EntityManager : uses
+UserDao ..> QueryParam : "creates query param"
+ThreadLocalContext ..> UserDao : optional ?
+
+'
+' =====================================================
+' Diagram Notes / Layout
+' =====================================================
+
+' Optional: Layout hints
+' hide methods
+' hide stereotypes
+@enduml

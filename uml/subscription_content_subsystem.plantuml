@@ -1,0 +1,911 @@
+@startuml
+
+' -----------------------------
+' AGGREGATE OF SUBSCRIPTION & CONTENT CLASSES
+' -----------------------------
+
+' === 1) ReaderHttpClient<T> ===
+abstract class ReaderHttpClient<T> {
+  - USER_AGENT : String
+  - sslSocketFactory : SSLSocketFactory
+  - timeout : int
+  --
+  + T open(URL url)
+  - HttpURLConnection buildHttpConnection(URL url)
+  + abstract T process(InputStream is)
+  + void setTimeout(int timeout)
+}
+
+' === 2) ArticleSanitizer ===
+class ArticleSanitizer {
+  - log : Logger
+  - INTEGER_POLICY : AttributePolicy
+  --
+  + String sanitize(String baseUri, String html)
+}
+
+' === 3) TextSanitizer ===
+class TextSanitizer {
+  - policy : PolicyFactory
+  - TAG_PATTERN : Pattern
+  --
+  + String sanitize(String html)
+}
+
+' === 4) ConfigUtil ===
+class ConfigUtil {
+  --
+  + static String getConfigStringValue(ConfigType configType)
+  + static ResourceBundle getConfigBundle()
+  + static int getConfigIntegerValue(ConfigType configType)
+  + static boolean getConfigBooleanValue(ConfigType configType)
+}
+
+' === 5) DirectoryUtil ===
+class DirectoryUtil {
+  --
+  + static File getBaseDataDirectory()
+  + static File getDbDirectory()
+  + static File getFaviconDirectory()
+  + static File getLuceneDirectory()
+  + static File getLogDirectory()
+  - static File getDataSubDirectory(String subdirectory)
+}
+
+' === 6) EntityManagerUtil ===
+class EntityManagerUtil {
+  --
+  + static void flush()
+}
+
+' === 7) StreamUtil ===
+class StreamUtil {
+  --
+  + static InputStream detectGzip(InputStream is) throws IOException
+}
+
+' === 8) TransactionUtil ===
+class TransactionUtil {
+  - static Logger log
+  --
+  + static void handle(Runnable runnable)
+  + static void commit()
+}
+
+' === 9) SubscriptionImportedEvent ===
+class SubscriptionImportedEvent {
+  - user : User
+  - importFile : File
+  --
+  + User getUser()
+  + void setUser(User user)
+  + File getImportFile()
+  + void setImportFile(File importFile)
+  + String toString()
+}
+
+' === 10) FaviconUpdateRequestedAsyncListener ===
+class FaviconUpdateRequestedAsyncListener {
+  - static Logger log
+  --
+  + void onFaviconUpdateRequested(FaviconUpdateRequestedEvent event)
+}
+
+' === 11) ConfigType (Enum) ===
+enum ConfigType {
+  --  
+  LUCENE_DIRECTORY_STORAGE
+}
+
+' === 12) SubscriptionImportAsyncListener ===
+class SubscriptionImportAsyncListener {
+  - static Logger log
+  - static String FILE_STARRED_JSON
+  - static String FILE_SUBSCRIPTIONS_XML
+  --
+  + void onSubscriptionImport(SubscriptionImportedEvent event)
+  - Job createJob(User user, File importFile)
+  - long getFeedCount(List<Outline> outlineList)
+  - void processImportFile(User user, File importFile, Job job)
+  - void importOutline(User user, List<Outline> outlineList, Job job)
+  - void importFeedFromStarred(User user, Feed feed, Article article)
+}
+
+' === 13) DeadEventListener ===
+class DeadEventListener {
+  - static Logger log
+  --
+  + void onDeadEvent(DeadEvent deadEvent)
+}
+
+' === 14) Article ===
+class Article {
+  - String id
+  - String feedId
+  - String url
+  - String baseUri
+  - String guid
+  - String title
+  - String creator
+  - String description
+  - String commentUrl
+  - String commentCount
+  - String enclosureUrl
+  - int enclosureLength
+  - String enclosureType
+  - Date publicationDate
+  - Date createDate
+  - Date deleteDate
+  --
+  + String getId()
+  + void setId(String id)
+  + String getFeedId()
+  + void setFeedId(String feedId)
+  + String getUrl()
+  + void setUrl(String url)
+  + String getBaseUri()
+  + void setBaseUri(String baseUri)
+  + String getGuid()
+  + void setGuid(String guid)
+  + String getTitle()
+  + void setTitle(String title)
+  + String getCreator()
+  + void setCreator(String creator)
+  + String getDescription()
+  + void setDescription(String description)
+  + String getCommentUrl()
+  + void setCommentUrl(String commentUrl)
+  + Integer getCommentCount()
+  + void setCommentCount(Integer commentCount)
+  + Date getPublicationDate()
+  + void setPublicationDate(Date publicationDate)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+' === 15) FaviconDownloader ===
+class FaviconDownloader {
+  - static Logger log
+  + final ImmutableMap<String, String> FAVICON_MIME_TYPE_MAP
+  --
+  + String downloadFaviconFromPage(String pageUrl, String directory, String fileName)
+  + String getFaviconUrl(String pageUrl, String fileName)
+  + String downloadFavicon(String faviconUrl, String directory, String fileName)
+}
+
+' === 16) FaviconExtractor ===
+class FaviconExtractor {
+  - static Logger log
+  - final URL url
+  - String favicon
+  --
+  + FaviconExtractor(String url)
+  + void readPage(InputStream is)
+  + void startElement(String uri, String localName, String qName, Attributes attributes)
+  + String getFavicon()
+}
+
+' === 17) Config ===
+class Config {
+  - ConfigType id
+  - String value
+  --
+  + ConfigType getId()
+  + void setId(ConfigType id)
+  + String getValue()
+  + void setValue(String value)
+  + String toString()
+}
+
+' === 18) FeedChooserStrategy ===
+class FeedChooserStrategy {
+  --
+  + String guess(List<String> feedList)
+}
+
+' === 19) RssExtractor ===
+class RssExtractor {
+  - static Logger log
+  - final URL url
+  - List<String> feedList
+  --
+  + RssExtractor(String url)
+  + void readPage(InputStream is)
+  + void startElement(String uri, String localName, String qName, Attributes attributes)
+  + List<String> getFeedList()
+}
+
+' === 20) Feed ===
+class Feed {
+  - String id
+  - String rssUrl
+  - String url
+  - String baseUri
+  - String title
+  - String language
+  - String description
+  - Date createDate
+  - Date lastFetchDate
+  - Date deleteDate
+  --
+  + String getId()
+  + void setId(String id)
+  + String getRssUrl()
+  + void setRssUrl(String rssUrl)
+  + String getUrl()
+  + void setUrl(String url)
+  + String getBaseUri()
+  + void setBaseUri(String baseUri)
+  + String getTitle()
+  + void setTitle(String title)
+  + String getLanguage()
+  + void setLanguage(String language)
+  + String getDescription()
+  + void setDescription(String description)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getLastFetchDate()
+  + void setLastFetchDate(Date lastFetchDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+' === 21) AtomArticleCommentUrlGuesserStrategy ===
+class AtomArticleCommentUrlGuesserStrategy {
+  --
+  + String guess(List<AtomLink> atomLinkList)
+}
+
+' === 22) AtomArticleUrlGuesserStrategy ===
+class AtomArticleUrlGuesserStrategy {
+  --
+  + String guess(List<AtomLink> atomLinkList)
+}
+
+' === 23) AtomLink ===
+class AtomLink {
+  - String rel
+  - String type
+  - String href
+  --
+  + AtomLink(String rel, String type, String href)
+  + String getRel()
+  + void setRel(String rel)
+  + String getHref()
+  + void setHref(String href)
+  + String getType()
+  + void setType(String type)
+}
+
+' === 24) AtomUrlGuesserStrategy ===
+class AtomUrlGuesserStrategy {
+  --
+  + String guessSiteUrl(List<AtomLink> atomLinkList)
+  + String guessFeedUrl(List<AtomLink> atomLinkList)
+}
+
+' === 25) GuidFixer ===
+class GuidFixer {
+  --
+  + static void fixGuid(Article article)
+}
+
+' === 26) RssReader ===
+class RssReader {
+  - String content
+  - Feed feed
+  - Article article
+  - List<Article> articleList
+  - List<AtomLink> atomLinkList
+  - List<AtomLink> atomArticleLinkList
+  - int fatalErrorCount
+  - Element currentElement
+  - Stack<Element> elementStack
+  - FeedType feedType
+  --
+  + RssReader()
+  + void readRssFeed(InputStream is)
+  + Feed getFeed()
+  + List<Article> getArticleList()
+  + void startElement(String uri, String localName, String qName, Attributes attributes)
+  + void endElement(String uri, String localName, String qName)
+  + void characters(char[] ch, int start, int length)
+  + void fatalError(SAXParseException e)
+  ' The rest are private (validateFeed(), fixGuid(), etc.) omitted for brevity
+}
+
+' === 27) XmlReader ===
+class XmlReader {
+  - static final int HEADER_SIZE
+  - InputStreamReader internalInputStreamReader
+  --
+  + XmlReader(InputStream in, String defaultEnc)
+  + void close()
+  + int read(char[] cbuf, int off, int len)
+}
+
+' === 28) OpmlFlattener ===
+class OpmlFlattener {
+  --
+  + static Map<String, List<Outline>> flatten(List<Outline> outlineList)
+}
+
+' === 29) OpmlReader ===
+class OpmlReader {
+  - Logger log
+  - String content
+  - Outline rootOutline
+  - Outline currentOutline
+  - Element currentElement
+  - Stack<Element> elementStack
+  - Stack<Outline> outlineStack
+  --
+  + OpmlReader()
+  + void read(InputStream is)
+  + void startElement(String uri, String localName, String qName, Attributes attributes)
+  + void endElement(String uri, String localName, String qName)
+  + void characters(char[] ch, int start, int length)
+  + List<Outline> getOutlineList()
+}
+
+' === 30) Outline ===
+class Outline {
+  - String text
+  - String title
+  - String type
+  - String xmlUrl
+  - String htmlUrl
+  - List<Outline> outlineList
+  --
+  + Outline()
+  + String getText()
+  + void setText(String text)
+  + String getTitle()
+  + void setTitle(String title)
+  + String getType()
+  + void setType(String type)
+  + String getXmlUrl()
+  + void setXmlUrl(String xmlUrl)
+  + String getHtmlUrl()
+  + void setHtmlUrl(String htmlUrl)
+  + List<Outline> getOutlineList()
+}
+
+' === 31) FeedSynchronization ===
+class FeedSynchronization {
+  - String id
+  - String feedId
+  - boolean success
+  - String message
+  - Integer duration
+  - Date createDate
+  --
+  + String getId()
+  + void setId(String id)
+  + String getFeedId()
+  + void setFeedId(String feedId)
+  + boolean isSuccess()
+  + void setSuccess(boolean success)
+  + String getMessage()
+  + void setMessage(String message)
+  + Integer getDuration()
+  + void setDuration(Integer duration)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + String toString()
+}
+
+' === 32) ArticleDao ===
+class ArticleDao {
+  --
+  + String create(Article article)
+  + Article update(Article article)
+  + List<Article> findAll()
+  + void delete(String id)
+  # QueryParam getQueryParam(ArticleCriteria criteria, FilterCriteria filterCriteria)
+}
+
+' === 33) ConfigDao ===
+class ConfigDao {
+  - EntityManager em
+  --
+  + Config getById(ConfigType id)
+}
+
+' === 34) FeedCriteria ===
+class FeedCriteria {
+  - String feedUrl
+  - boolean withUserSubscription
+  --
+  + String getFeedUrl()
+  + FeedCriteria setFeedUrl(String feedUrl)
+  + boolean isWithUserSubscription()
+  + FeedCriteria setWithUserSubscription(boolean val)
+}
+
+' === 35) FeedSubscriptionCriteria ===
+class FeedSubscriptionCriteria {
+  - String id
+  - String userId
+  - String feedId
+  - String categoryId
+  - String feedUrl
+  - boolean unread
+  --
+  + String getId()
+  + FeedSubscriptionCriteria setId(String id)
+  + String getUserId()
+  + FeedSubscriptionCriteria setUserId(String userId)
+  + String getFeedId()
+  + FeedSubscriptionCriteria setFeedId(String feedId)
+  + String getCategoryId()
+  + FeedSubscriptionCriteria setCategoryId(String categoryId)
+  + String getFeedUrl()
+  + FeedSubscriptionCriteria setFeedUrl(String feedUrl)
+  + boolean isUnread()
+  + FeedSubscriptionCriteria setUnread(boolean unread)
+}
+
+' === 36) ArticleDto ===
+class ArticleDto {
+  - String id
+  - String url
+  - String guid
+  - String title
+  - String creator
+  - String description
+  - String commentUrl
+  - Integer commentCount
+  - String enclosureUrl
+  - Integer enclosureCount
+  - String enclosureType
+  - Date publicationDate
+  - Date createDate
+  - String feedId
+  --
+  + String getId()
+  + void setId(String id)
+  + String getUrl()
+  + void setUrl(String url)
+  + String getGuid()
+  + void setGuid(String guid)
+  + String getTitle()
+  + void setTitle(String title)
+  + String getCreator()
+  + void setCreator(String creator)
+  + String getDescription()
+  + void setDescription(String desc)
+  + String getCommentUrl()
+  + void setCommentUrl(String url)
+  + Integer getCommentCount()
+  + void setCommentCount(Integer count)
+  + Date getPublicationDate()
+  + void setPublicationDate(Date date)
+  + Date getCreateDate()
+  + void setCreateDate(Date date)
+  + String getEnclosureUrl()
+  + void setEnclosureUrl(String url)
+  + Integer getEnclosureCount()
+  + void setEnclosureCount(Integer cnt)
+  + String getEnclosureType()
+  + void setEnclosureType(String type)
+  + String getFeedId()
+  + void setFeedId(String feedId)
+}
+
+' === 37) FeedDto ===
+class FeedDto {
+  - String id
+  - String rssUrl
+  --
+  + String getId()
+  + void setId(String id)
+  + String getRssUrl()
+  + void setRssUrl(String url)
+}
+
+' === 38) FeedSubscriptionDto ===
+class FeedSubscriptionDto {
+  - String id
+  - String feedSubscriptionTitle
+  - String feedTitle
+  - String userId
+  - String feedId
+  - String feedRssUrl
+  - String feedUrl
+  - String feedDescription
+  - Integer unreadUserArticleCount
+  - Integer synchronizationFailCount
+  - Date createDate
+  - String categoryId
+  - String categoryParentId
+  - String categoryName
+  - boolean categoryFolded
+  --
+  + String getId()
+  + void setId(String id)
+  + String getFeedSubscriptionTitle()
+  + void setFeedSubscriptionTitle(String title)
+  + String getFeedTitle()
+  + void setFeedTitle(String feedTitle)
+  + String getUserId()
+  + void setUserId(String userId)
+  + String getFeedId()
+  + void setFeedId(String feedId)
+  + String getFeedRssUrl()
+  + void setFeedRssUrl(String feedRssUrl)
+  + String getFeedUrl()
+  + void setFeedUrl(String feedUrl)
+  + String getFeedDescription()
+  + void setFeedDescription(String feedDescription)
+  + Integer getUnreadUserArticleCount()
+  + void setUnreadUserArticleCount(Integer count)
+  + Integer getSynchronizationFailCount()
+  + void setSynchronizationFailCount(Integer count)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + String getCategoryId()
+  + void setCategoryId(String categoryId)
+  + String getCategoryParentId()
+  + void setCategoryParentId(String parentId)
+  + String getCategoryName()
+  + void setCategoryName(String categoryName)
+  + boolean isCategoryFolded()
+  + void setCategoryFolded(boolean folded)
+}
+
+' === 39) ArticleMapper ===
+class ArticleMapper {
+  --
+  + ArticleDto map(Object[] o)
+}
+
+' === 40) FeedMapper ===
+class FeedMapper {
+  --
+  + FeedDto map(Object[] o)
+}
+
+' === 41) FeedSubscriptionMapper ===
+class FeedSubscriptionMapper {
+  --
+  + FeedSubscriptionDto map(Object[] o)
+}
+
+' === 42) ManagedProviderConnectionHelper ===
+class ManagedProviderConnectionHelper {
+  - Properties cfgProperties
+  - StandardServiceRegistryImpl serviceRegistry
+  - Connection connection
+  --
+  + ManagedProviderConnectionHelper(Properties cfgProperties)
+  + void prepare(boolean needsAutoCommit) throws SQLException
+  + static StandardServiceRegistryImpl createServiceRegistry(Properties properties)
+  + Connection getConnection() throws SQLException
+  + void release() throws SQLException
+  - void releaseConnection() throws SQLException
+  - void releaseServiceRegistry()
+}
+
+' === 43) QueryParam ===
+class QueryParam {
+  - String queryString
+  - List<String> criteriaList
+  - SortCriteria sortCriteria
+  - Map<String, Object> parameterMap
+  - FilterCriteria filterCriteria
+  - List<String> groupByList
+  - ResultMapper resultMapper
+  --
+  + QueryParam(String queryString, List<String> criteriaList, Map<String,Object> parameterMap,
+               SortCriteria sortCriteria, FilterCriteria filterCriteria, List<String> groupByList,
+               ResultMapper resultMapper)
+  + QueryParam(String queryString, List<String> criteriaList, Map<String,Object> parameterMap,
+               SortCriteria sortCriteria, FilterCriteria filterCriteria, ResultMapper resultMapper)
+  + String getQueryString()
+  + void setQueryString(String queryString)
+  + SortCriteria getSortCriteria()
+  + void setSortCriteria(SortCriteria sortCriteria)
+  + List<String> getCriteriaList()
+  + Map<String, Object> getParameterMap()
+  + FilterCriteria getFilterCriteria()
+  + List<String> getGroupByList()
+  + ResultMapper getResultMapper()
+}
+
+' === 44) SessionUtil ===
+class SessionUtil {
+  --
+  + static Session getCurrentSession()
+}
+
+' === 45) SuppliedConnectionProviderConnectionHelper ===
+class SuppliedConnectionProviderConnectionHelper {
+  - ConnectionProvider provider
+  - Connection connection
+  - boolean toggleAutoCommit
+  --
+  + SuppliedConnectionProviderConnectionHelper(ConnectionProvider provider)
+  + void prepare(boolean needsAutoCommit) throws SQLException
+  + Connection getConnection() throws SQLException
+  + void release() throws SQLException
+}
+
+' === 46) MemoryAppender ===
+class MemoryAppender {
+  - int size
+  - Queue<LogEntry> logQueue
+  --
+  + boolean requiresLayout()
+  + synchronized void close()
+  + synchronized void append(LoggingEvent event)
+  + Queue<LogEntry> getLogList()
+  + void setSize(int size)
+  + void find(LogCriteria criteria, PaginatedList<LogEntry> list)
+}
+
+' === 47) MimeType ===
+class MimeType {
+  {static} IMAGE_X_ICON : String
+  {static} IMAGE_PNG : String
+  {static} IMAGE_JPEG : String
+  {static} IMAGE_GIF : String
+  {static} APPLICATION_ZIP : String
+}
+
+' === 48) BaseDao (abstract) ===
+abstract class BaseDao {
+  --
+  + void findByCriteria(PaginatedList list, Object criteria, SortCriteria sc, FilterCriteria fc)
+  + List findByCriteria(Object criteria, SortCriteria sc, FilterCriteria fc)
+  + List findByCriteria(Object criteria)
+  + Object findFirstByCriteria(Object criteria)
+  # abstract QueryParam getQueryParam(Object criteria, FilterCriteria filterCriteria)
+}
+
+' === 49) UrlUtil ===
+class UrlUtil {
+  --
+  + static String getBaseUri(Feed feed, Article article)
+  + static String getBaseUri(String urlString)
+  + static String completeUrl(String baseUrl, String relativeUrl)
+}
+
+' === 50) EnvironmentUtil ===
+class EnvironmentUtil {
+  --
+  + static boolean isWindows()
+  + static boolean isMacOs()
+  + static boolean isUnix()
+  + static boolean isUnitTest()
+  + static String getWindowsAppData()
+  + static String getMacOsUserHome()
+  + static String getReaderHome()
+  + static String getHibernateProperties()
+  + static boolean isApplicationLogEnabled()
+  + static boolean isSslTrustAll()
+  + static boolean isWebappContext()
+  + static void setWebappContext(boolean webappContext)
+}
+
+' === 51) ThreadLocalContext ===
+class ThreadLocalContext {
+  - EntityManager entityManager
+  --
+  + static ThreadLocalContext get()
+  + static void cleanup()
+  + boolean isInTransactionalContext()
+  + EntityManager getEntityManager()
+  + void setEntityManager(EntityManager em)
+}
+
+' === 52) EMF ===
+class EMF {
+  - static Logger log
+  - static Map<Object,Object> properties
+  - static EntityManagerFactory emfInstance
+  --
+  + static EntityManagerFactory get()
+  + static boolean isDriverHsql()
+  + static boolean isDriverPostgresql()
+  + static String getDriver()
+}
+
+' === 53) FaviconUpdateRequestedEvent ===
+class FaviconUpdateRequestedEvent {
+  - Feed feed
+  --
+  + Feed getFeed()
+  + void setFeed(Feed feed)
+  + String toString()
+}
+
+' === 54) IndexingService ===
+class IndexingService {
+  - static Logger log
+  - Directory directory
+  - DirectoryReader directoryReader
+  - String luceneStorageConfig
+  --
+  + void startUp()
+  + void shutDown()
+  + void runOneIteration()
+  + Scheduler scheduler()
+  + PaginatedList searchArticles(String userId, String searchQuery, Integer offset, Integer limit)
+  + void rebuildIndex()
+  + Directory getDirectory()
+  + DirectoryReader getDirectoryReader()
+}
+
+' === 55) JobDao (Used as example in text; can be empty in content subsystem) ===
+class JobDao {
+  --
+  + String create(Job job)
+  + Job getActiveJob(String id)
+  + void delete(String id)
+  + Job update(Job job)
+}
+
+' === 56) JobEventDao (Likewise) ===
+class JobEventDao {
+  --
+  + String create(JobEvent jobEvent)
+  + void delete(String id)
+}
+
+' === 57) CategoryDao (From feed organization, might appear here as placeholder) ===
+class CategoryDao {
+  --
+  + String create(Category category)
+  + Category update(Category category)
+  + void reorder(Category category, int order)
+  + void delete(String id)
+  + Category getRootCategory(String userId)
+  + Category getCategory(String id, String userId)
+}
+
+' === 58) FeedSubscriptionDao ===
+class FeedSubscriptionDao {
+  --
+  + String create(FeedSubscription subscription)
+  + FeedSubscription update(FeedSubscription subscription)
+  + void updateUnreadCount(String id, Integer unreadCount)
+  + void reorder(FeedSubscription subscription, int order)
+  + void delete(String id)
+  + FeedSubscription getFeedSubscription(String id, String userId)
+  + List<FeedSubscription> findByCategory(String categoryId)
+  + int getCategoryCount(String categoryId, String userId)
+}
+
+' === 59) FeedService ===
+class FeedService {
+  - static Logger log
+  --
+  + void startUp()
+  + void shutDown()
+  + void runOneIteration()
+  + Scheduler scheduler()
+  + void synchronizeAllFeeds()
+  + Feed synchronize(String url)
+  + void createInitialUserArticle(String userId, FeedSubscription feedSubscription)
+}
+
+' === 60) DateUtil ===
+class DateUtil {
+  - static Logger log
+  - static ImmutableMap<String,String> TIMEZONE_CODE_MAP
+  --
+  + static String guessTimezoneOffset(String date)
+  + static Date parseDate(String date, DateTimeFormatter df)
+}
+
+
+' --------------------------------------------------------
+'           PLACEHOLDER CLASSES (EMPTY SHELLS)
+' --------------------------------------------------------
+interface SSLSocketFactory
+interface HttpURLConnection
+class User
+class Job
+class File
+class DeadEvent
+class RssUrl
+class Element
+class FeedType
+class SAXParseException
+class Attributes
+class StandardServiceRegistryImpl
+class Connection
+class Properties
+class ConnectionProvider
+class LogEntry
+class LoggingEvent
+class SortCriteria
+class FilterCriteria
+class ResultMapper
+class JSEngine
+class Category
+class FeedSubscription
+class Scheduler
+class PaginatedList
+class UserArticleDto
+class Directory
+class DirectoryReader
+class ArticleCriteria
+class JobEvent
+class OutlineCriteria  
+class EMFHelper   
+class ThreadLocal
+class DateTimeFormatter
+
+' --------------------------------------------------------
+'                    RELATIONSHIPS
+' --------------------------------------------------------
+'Below relationships are drawn from text in “Relationships” or from direct mention in methods/attributes.
+
+' Example: FaviconUpdateRequestedAsyncListener listens for FaviconUpdateRequestedEvent
+FaviconUpdateRequestedAsyncListener --> FaviconUpdateRequestedEvent : "listens for"
+
+SubscriptionImportedEvent --> User : "references"
+SubscriptionImportedEvent --> File : "import file"
+
+Article "1" -- "1" Feed : "belongs to (feedId)"
+
+FaviconDownloader --> FaviconExtractor : "uses"
+FaviconDownloader --> ReaderHttpClient : "uses"
+
+RssExtractor --> AtomLink : "<<extracted feed links>>"
+RssReader --> Feed : "creates/updates"
+RssReader --> Article : "creates/updates"
+
+Feed "1" o-- "many" Article : "contains articles"
+
+SubscriptionImportAsyncListener --> SubscriptionImportedEvent : "handles"
+SubscriptionImportAsyncListener --> Outline : "parses OPML"
+SubscriptionImportAsyncListener --> Feed : "creates/updates"
+SubscriptionImportAsyncListener --> Article : "imports starred"
+
+DeadEventListener --> DeadEvent : "logs"
+
+ArticleDao --> Article : "CRUD"
+
+ConfigDao --> Config : "retrieves"
+
+DirectoryUtil --> EnvironmentUtil : "gets OS environment"
+
+EntityManagerUtil --> ThreadLocalContext : "flushes current EM"
+
+StreamUtil --> GZIPInputStream : "decompress"
+StreamUtil --> PushbackInputStream : "detect"
+
+TransactionUtil --> ThreadLocalContext : "manages EM"
+TransactionUtil --> "Runnable" : "executes"
+
+FeedService --> RssReader : "parse feeds"
+FeedService --> Feed : "synchronize"
+FeedService --> Article : "manage articles"
+FeedService --> SubscriptionImportedEvent : "some usage (optional)"
+
+IndexingService --> ArticleDao : "search"
+IndexingService --> Directory : "Lucene store"
+IndexingService --> DirectoryReader : "Lucene read"
+
+UrlUtil --> Feed : "getBaseUri"
+UrlUtil --> Article : "getBaseUri"
+
+OpmlReader --> Outline : "creates tree"
+OpmlFlattener --> Outline : "flattens"
+
+FeedSubscriptionDao --> FeedSubscription : "manages"
+
+' We can show a few more references if needed:
+ArticleSanitizer --> UrlUtil : "absolute URLs"
+TextSanitizer --> Pattern : "regex removal"
+ConfigUtil --> ConfigType : "fetch config"
+MemoryAppender --> LogEntry : "stores logs"
+
+@enduml

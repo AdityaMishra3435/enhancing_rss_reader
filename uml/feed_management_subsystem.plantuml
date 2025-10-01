@@ -1,0 +1,819 @@
+@startuml
+
+' ============================
+' 1) Classes with Attributes/Methods from Tables
+' ============================
+
+'-----------------------------------
+' (1) PaginatedLists
+'-----------------------------------
+class PaginatedLists {
+  - int DEFAULT_PAGE_SIZE
+  - int MAX_PAGE_SIZE
+
+  + static <E> PaginatedList<E> create(Integer pageSize, Integer offset)
+  + static <E> PaginatedList<E> create()
+  + static <E> List<E> executeQuery(QueryParam queryParam)
+  + static <E> void executePaginatedQuery(PaginatedList<E> paginatedList, QueryParam queryParam, SortCriteria sortCriteria)
+  - static <E> void executeCountQuery(PaginatedList<E> paginatedList, QueryParam queryParam)
+  - static <E> void executeResultQuery(PaginatedList<E> paginatedList, QueryParam queryParam)
+  - static String getQueryString(QueryParam queryParam)
+  - static String getNativeCountQuery(QueryParam queryParam)
+  - static String getOrderByClause(SortCriteria sortCriteria)
+  - static void mapQueryParam(Query query, QueryParam queryParam)
+  - static void mapFilterColumn(Query query, QueryParam queryParam)
+}
+
+'-----------------------------------
+' (2) PaginatedList
+'-----------------------------------
+class PaginatedList {
+  - int limit
+  - int offset
+  - int resultCount
+  - List<T> resultList
+
+  + PaginatedList(int pageSize, int offset)
+  + int getResultCount()
+  + void setResultCount(int resultCount)
+  + List<T> getResultList()
+  + void setResultList(List<T> resultList)
+  + int getLimit()
+  + int getOffset()
+}
+
+'-----------------------------------
+' (3) SortCriteria
+'-----------------------------------
+class SortCriteria {
+  - int column
+  - boolean asc
+  - String sortQuery
+
+  + SortCriteria(String sortQuery)
+  + SortCriteria(Integer column, Boolean asc)
+  + String getSortQuery()
+  + int getColumn()
+  + boolean isAsc()
+}
+
+'-----------------------------------
+' (4) ArticleDeletedAsyncEvent
+'-----------------------------------
+class ArticleDeletedAsyncEvent {
+  - List articleList
+
+  + List<Article> getArticleList()
+  + void setArticleList(List<Article> articleList)
+  + String toString()
+}
+
+'-----------------------------------
+' (5) ArticleUpdatedAsyncEvent
+'-----------------------------------
+class ArticleUpdatedAsyncEvent {
+  - List<Article> articleList
+
+  + List<Article> getArticleList()
+  + void setArticleList(List<Article> articleList)
+  + String toString()
+}
+
+'-----------------------------------
+' (6) RebuildIndexAsyncEvent
+'-----------------------------------
+class RebuildIndexAsyncEvent {
+  + String toString()
+}
+
+'-----------------------------------
+' (7) ArticleDeletedAsyncListener
+'-----------------------------------
+class ArticleDeletedAsyncListener {
+  - static final Logger log
+
+  + void onArticleDeleted(ArticleDeletedAsyncEvent articlesDeletedAsyncEvent) throws Exception
+}
+
+'-----------------------------------
+' (8) ArticleUpdatedAsyncListener
+'-----------------------------------
+class ArticleUpdatedAsyncListener {
+  - static final Logger log
+
+  + void onArticleUpdated(ArticleUpdatedAsyncEvent articlesUpdatedAsyncEvent)
+}
+
+'-----------------------------------
+' (9) RebuildIndexAsyncListener
+'-----------------------------------
+class RebuildIndexAsyncListener {
+  - static final Logger log
+
+  + void onArticleCreated(RebuildIndexAsyncEvent rebuildIndexAsyncEvent)
+}
+
+'-----------------------------------
+' (10) IndexingService
+'-----------------------------------
+class IndexingService {
+  - static Logger log
+  - Directory directory
+  - DirectoryReader directoryReader
+  - String luceneStorageConfig
+
+  # void startUp()
+  # void shutDown()
+  # void runOneIteration()
+  # Scheduler scheduler()
+
+  + PaginatedList<UserArticleDto> searchArticles(String userId, String searchQuery, Integer offset, Integer limit)
+  + void rebuildIndex()
+  + Directory getDirectory()
+  + DirectoryReader getDirectoryReader()
+}
+
+class AbstractScheduledService {
+}
+
+IndexingService --|> AbstractScheduledService
+
+'-----------------------------------
+' (11) Category
+'-----------------------------------
+class Category {
+  - String id
+  - String userId
+  - String parentId
+  - String name
+  - Integer order
+  - boolean folded
+  - Date createDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getUserId()
+  + void setUserId(String userId)
+  + String getParentId()
+  + void setParentId(String parentId)
+  + String getName()
+  + void setName(String name)
+  + Integer getOrder()
+  + void setOrder(Integer order)
+  + boolean isFolded()
+  + void setFolded(boolean folded)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+'-----------------------------------
+' (12) ArticleDao
+'-----------------------------------
+class ArticleDao {
+  + void rebuildIndex(List<Article> articleList)
+  + void create(List<Article> articleList)
+  + void update(List<Article> articleList)
+  + void delete(List<Article> articleList)
+  + Map<String,Article> search(PaginatedList<UserArticleDto> paginatedList, String searchQuery)
+  - Document getDocumentFromArticle(Article article)
+}
+
+'-----------------------------------
+' (13) FeedSubscription
+'-----------------------------------
+class FeedSubscription {
+  - String id
+  - String userId
+  - String feedId
+  - String categoryId
+  - String title
+  - Integer order
+  - Integer unreadCount
+  - Date createDate
+  - Date deleteDate
+
+  + String getId()
+  + void setId(String id)
+  + String getUserId()
+  + void setUserId(String userId)
+  + String getFeedId()
+  + void setFeedId(String feedId)
+  + String getCategoryId()
+  + void setCategoryId(String categoryId)
+  + String getTitle()
+  + void setTitle(String title)
+  + Integer getOrder()
+  + void setOrder(Integer order)
+  + Integer getUnreadCount()
+  + void setUnreadCount(Integer unreadCount)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + Date getDeleteDate()
+  + void setDeleteDate(Date deleteDate)
+  + String toString()
+}
+
+'-----------------------------------
+' (14) FeedSynchronization
+'-----------------------------------
+class FeedSynchronization {
+  - String id
+  - String feedId
+  - boolean success
+  - String message
+  - Integer duration
+  - Date createDate
+
+  + String getId()
+  + void setId(String id)
+  + String getFeedId()
+  + void setFeedId(String feedId)
+  + boolean isSuccess()
+  + void setSuccess(boolean success)
+  + String getMessage()
+  + void setMessage(String message)
+  + Integer getDuration()
+  + void setDuration(Integer duration)
+  + Date getCreateDate()
+  + void setCreateDate(Date createDate)
+  + String toString()
+}
+
+'-----------------------------------
+' (15) FilterColumn (abstract)
+'-----------------------------------
+abstract class FilterColumn {
+  protected String column
+  protected String filter
+
+  + FilterColumn(String column, String filter)
+  + String getColumn()
+  + String getFilter()
+  + abstract String getPredicate()
+  + abstract Object getParamValue()
+  + String getParamName()
+  + boolean hasParam()
+}
+
+'-----------------------------------
+' (16) FilterCriteria
+'-----------------------------------
+class FilterCriteria {
+  - List<FilterColumn> filterColumnList
+
+  + FilterCriteria(List<FilterColumn> filterColumnList)
+  + List<FilterColumn> getFilterColumnList()
+}
+
+'-----------------------------------
+' (17) CategoryDao
+'-----------------------------------
+class CategoryDao {
+  - EntityManager em
+
+  + String create(Category category)
+  + Category update(Category category)
+  + void reorder(Category category, int order)
+  + void delete(String id)
+  + Category getRootCategory(String userId)
+  + Category getCategory(String id, String userId)
+  + int getCategoryCount(String parentId, String userId)
+  + List<Category> findAllCategory(String userId)
+  + List<Category> findSubCategory(String parentId, String userId)
+}
+
+'-----------------------------------
+' (18) FeedDao
+'-----------------------------------
+class FeedDao {
+  - EntityManager em
+
+  + String create(Feed feed)
+  + void delete(String id)
+  + Feed getByRssUrl(String rssUrl)
+  + Feed update(Feed feed)
+  # QueryParam getQueryParam(FeedCriteria, FilterCriteria)
+}
+
+'-----------------------------------
+' (19) FeedSubscriptionDao
+'-----------------------------------
+class FeedSubscriptionDao {
+  - EntityManager em
+
+  + QueryParam getQueryParam(FeedSubscriptionCriteria, FilterCriteria)
+  + String create(FeedSubscription feedSubscription)
+  + FeedSubscription update(FeedSubscription feedSubscription)
+  + void updateUnreadCount(String id, Integer unreadCount)
+  + void reorder(FeedSubscription feedSubscription, int order)
+  + void delete(String id)
+  + FeedSubscription getFeedSubscription(String id, String userId)
+  + List<FeedSubscription> findByCategory(String categoryId)
+  + int getCategoryCount(String categoryId, String userId)
+}
+
+'-----------------------------------
+' (20) FeedSynchronizationDao
+'-----------------------------------
+class FeedSynchronizationDao {
+  + String create(FeedSynchronization feedSynchronization)
+  + void deleteOldFeedSynchronization(String feedId, int minutes)
+  + List<FeedSynchronization> findByFeedId(String feedId)
+}
+
+'-----------------------------------
+' (21) ArticleCriteria
+'-----------------------------------
+class ArticleCriteria {
+  - String id
+  - List<String> guidIn
+  - String title
+  - String url
+  - Date publicationDateMin
+  - String feedId
+
+  + String getId()
+  + ArticleCriteria setId(String id)
+  + List<String> getGuidIn()
+  + ArticleCriteria setGuidIn(List<String> guidIn)
+  + String getTitle()
+  + ArticleCriteria setTitle(String title)
+  + String getUrl()
+  + ArticleCriteria setUrl(String url)
+  + Date getPublicationDateMin()
+  + ArticleCriteria setPublicationDateMin(Date date)
+  + String getFeedId()
+  + ArticleCriteria setFeedId(String feedId)
+}
+
+'-----------------------------------
+' (22) FeedSubscriptionCriteria
+'-----------------------------------
+class FeedSubscriptionCriteria {
+  - String id
+  - String userId
+  - String feedId
+  - String categoryId
+  - String feedUrl
+  - boolean unread
+
+  + String getId()
+  + FeedSubscriptionCriteria setId(String id)
+  + String getUserId()
+  + FeedSubscriptionCriteria setUserId(String userId)
+  + String getFeedId()
+  + FeedSubscriptionCriteria setFeedId(String feedId)
+  + String getCategoryId()
+  + FeedSubscriptionCriteria setCategoryId(String categoryId)
+  + String getFeedUrl()
+  + FeedSubscriptionCriteria setFeedUrl(String feedUrl)
+  + boolean isUnread()
+  + FeedSubscriptionCriteria setUnread(boolean unread)
+}
+
+'-----------------------------------
+' (23) UserArticleCriteria
+'-----------------------------------
+class UserArticleCriteria {
+  - String userId
+  - String feedId
+  - boolean visible
+  - boolean subscribed
+  - String feedSubscriptionId
+  - String categoryId
+  - boolean unread
+  - boolean starred
+  - String articleId
+  - List<String> articleIdIn
+  - String userArticleId
+  - Date articlePublicationDateMax
+  - Date userArticleStarredDateMax
+  - String articleIdMax
+  - String userArticleIdMax
+  - boolean fetchAllFeedSubscription
+
+  + String getUserId()
+  + UserArticleCriteria setUserId(String)
+  + String getFeedId()
+  + UserArticleCriteria setFeedId(String)
+  + boolean isVisible()
+  + UserArticleCriteria setVisible(boolean)
+  + boolean isSubscribed()
+  + UserArticleCriteria setSubscribed(boolean)
+  + String getFeedSubscriptionId()
+  + UserArticleCriteria setFeedSubscriptionId(String)
+  + boolean isUnread()
+  + UserArticleCriteria setUnread(boolean)
+  + String getCategoryId()
+  + UserArticleCriteria setCategoryId(String)
+  + boolean isStarred()
+  + UserArticleCriteria setStarred(boolean)
+  + String getArticleId()
+  + UserArticleCriteria setArticleId(String)
+  + List<String> getArticleIdIn()
+  + UserArticleCriteria setArticleIdIn(List<String>)
+  + String getUserArticleId()
+  + UserArticleCriteria setUserArticleId(String)
+  + Date getArticlePublicationDateMax()
+  + UserArticleCriteria setArticlePublicationDateMax(Date)
+  + Date getUserArticleStarredDateMax()
+  + UserArticleCriteria setUserArticleStarredDateMax(Date)
+  + String getArticleIdMax()
+  + UserArticleCriteria setArticleIdMax(String)
+  + String getUserArticleIdMax()
+  + UserArticleCriteria setUserArticleIdMax(String)
+  + boolean isFetchAllFeedSubscription()
+  + UserArticleCriteria setFetchAllFeedSubscription(boolean)
+}
+
+'-----------------------------------
+' (24) BaseDao (abstract)
+'-----------------------------------
+abstract class BaseDao {
+  + void findByCriteria(PaginatedList<T> list, C criteria, SortCriteria sortCriteria, FilterCriteria filterCriteria)
+  + List<T> findByCriteria(C criteria, SortCriteria sortCriteria, FilterCriteria filterCriteria)
+  + List<T> findByCriteria(C criteria)
+  + T findFirstByCriteria(C criteria)
+  # abstract QueryParam getQueryParam(C criteria, FilterCriteria filterCriteria)
+}
+
+'-----------------------------------
+' (25) UserArticleDto
+'-----------------------------------
+class UserArticleDto {
+  - String id
+  - Long readTimestamp
+  - Long starTimestamp
+  - String feedTitle
+  - String feedSubscriptionId
+  - String feedSubscriptionTitle
+  - String articleId
+  - String articleUrl
+  - String articleGuid
+  - String articleTitle
+  - String articleCreator
+  - String articleDescription
+  - String articleCommentUrl
+  - Integer articleCommentCount
+  - String articleEnclosureUrl
+  - Integer articleEnclosureLength
+  - String articleEnclosureType
+  - Long articlePublicationTimestamp
+
+  + String getId()
+  + void setId(String id)
+  + Long getReadTimestamp()
+  + void setReadTimestamp(Long readTimestamp)
+  + Long getStarTimestamp()
+  + void setStarTimestamp(Long starTimestamp)
+  + String getFeedTitle()
+  + void setFeedTitle(String feedTitle)
+  + String getFeedSubscriptionId()
+  + void setFeedSubscriptionId(String feedSubscriptionId)
+  + String getFeedSubscriptionTitle()
+  + void setFeedSubscriptionTitle(String feedSubscriptionTitle)
+  + String getArticleId()
+  + void setArticleId(String articleId)
+  + String getArticleUrl()
+  + void setArticleUrl(String articleUrl)
+  + String getArticleGuid()
+  + void setArticleGuid(String articleGuid)
+  + String getArticleTitle()
+  + void setArticleTitle(String articleTitle)
+  + String getArticleCreator()
+  + void setArticleCreator(String articleCreator)
+  + String getArticleDescription()
+  + void setArticleDescription(String articleDescription)
+  + String getArticleCommentUrl()
+  + void setArticleCommentUrl(String articleCommentUrl)
+  + Integer getArticleCommentCount()
+  + void setArticleCommentCount(Integer articleCommentCount)
+  + String getArticleEnclosureUrl()
+  + void setArticleEnclosureUrl(String articleEnclosureUrl)
+  + Integer getArticleEnclosureLength()
+  + void setArticleEnclosureLength(Integer articleEnclosureLength)
+  + String getArticleEnclosureType()
+  + void setArticleEnclosureType(String articleEnclosureType)
+  + Long getArticlePublicationTimestamp()
+  + void setArticlePublicationTimestamp(Long articlePublicationTimestamp)
+}
+
+'-----------------------------------
+' (26) ArticleCreatedAsyncEvent
+'-----------------------------------
+class ArticleCreatedAsyncEvent {
+  - List articleList
+
+  + List getArticleList()
+  + void setArticleList(List articleList)
+  + String toString()
+}
+
+'-----------------------------------
+' (27) ArticleCreatedAsyncListener
+'-----------------------------------
+class ArticleCreatedAsyncListener {
+  - static final Logger log
+
+  + void onArticleCreated(ArticleCreatedAsyncEvent articlesCreatedAsyncEvent)
+}
+
+
+' ============================
+' 2) "(not)" Classes with Basic Data
+' ============================
+
+' (a) LuceneUtil
+class LuceneUtil {
+  - static Logger log
+  + static void handle(LuceneRunnable runnable)
+}
+
+interface LuceneRunnable {
+  + void run(IndexWriter indexWriter)
+}
+
+' (b) StarredArticleImportedEvent
+class StarredArticleImportedEvent {
+  - Feed feed
+  - Article article
+
+  + Feed getFeed()
+  + void setFeed(Feed feed)
+  + Article getArticle()
+  + void setArticle(Article article)
+  + String toString()
+}
+
+' (c) StarredArticleImportedListener
+interface StarredArticleImportedListener {
+  + void onStarredArticleImported(StarredArticleImportedEvent event)
+}
+
+' (d) StarredReader
+class StarredReader {
+  - static final Logger log
+  - StarredArticleImportedListener starredArticleImportedListener
+
+  + void read(InputStream is)
+  + void setStarredArticleListener(StarredArticleImportedListener starredArticleListener)
+}
+
+' (e) ReaderStandardAnalyzer
+class ReaderStandardAnalyzer {
+  + static final int DEFAULT_MAX_TOKEN_LENGTH
+  - int maxTokenLength
+  + static final CharArraySet STOP_WORDS_SET
+
+  + ReaderStandardAnalyzer(Version matchVersion, CharArraySet stopWords)
+  + ReaderStandardAnalyzer(Version matchVersion)
+  + ReaderStandardAnalyzer(Version matchVersion, Reader stopwords)
+  + void setMaxTokenLength(int length)
+  + int getMaxTokenLength()
+  + TokenStreamComponents createComponents(String fieldName, Reader reader)
+  + Reader initReader(String fieldName, Reader reader)
+}
+
+' (f) ThreadLocalContext
+class ThreadLocalContext {
+  + static ThreadLocal<ThreadLocalContext> threadLocalContext
+  - EntityManager entityManager
+
+  + static ThreadLocalContext get()
+  + static void cleanup()
+  + boolean isInTransactionalContext()
+  + EntityManager getEntityManager()
+  + void setEntityManager(EntityManager entityManager)
+}
+
+' (g) DbOpenHelper
+abstract class DbOpenHelper {
+  - static Logger log
+  - final ConnectionHelper connectionHelper
+  - final SqlStatementLogger sqlStatementLogger
+  - final List<Exception> exceptions
+  - Formatter formatter
+  - boolean haltOnError
+  - Statement stmt
+
+  + DbOpenHelper(ServiceRegistry serviceRegistry)
+  + void open()
+  + void executeAllScript(int version)
+  - void executeScript(InputStream inputScript)
+  + abstract void onCreate()
+  + abstract void onUpgrade(int oldVersion, int newVersion)
+  + List<?> getExceptions()
+  + void setHaltOnError(boolean haltOnError)
+  + void setFormat(boolean format)
+}
+
+' (h) DialectUtil
+class DialectUtil {
+  + static boolean isObjectNotFound(String message)
+  + static String transform(String sql)
+  + static String transformToPostgresql(String sql)
+  + static String getDateDiff(String field, String diff, String unit)
+  + static String getTimeStamp(String value)
+  + static String getNullParameter(String parameterName, Object value)
+}
+
+' (i) FeedSubscriptionMapper
+class FeedSubscriptionMapper {
+  + FeedSubscriptionDto map(Object[] o)
+}
+
+' (j) JobEventMapper
+class JobEventMapper {
+  + JobEventDto map(Object[] o)
+}
+
+' (k) FeedService
+class FeedService {
+  - static Logger log
+
+  + void startUp()
+  + void shutDown()
+  + void runOneIteration()
+  + Scheduler scheduler()
+  + void synchronizeAllFeeds()
+  + Feed synchronize(String url)
+  - void completeArticleList(List<Article> articleList)
+  - List<Article> getArticleToRemove(List<Article> articleList)
+  - boolean isFaviconUpdated(Feed feed)
+  - RssReader parseFeedOrPage(String url, boolean parsePage)
+  - void logParsingError(String url, Exception e)
+  + void createInitialUserArticle(String userId, FeedSubscription feedSubscription)
+}
+
+
+' ============================
+' 3) Stub Classes (referenced but no table details)
+' ============================
+class Feed {
+}
+class Article {
+}
+class RssReader {
+}
+class FaviconUpdateRequestedEvent {
+}
+class TransactionUtil {
+}
+class UserArticleDao {
+}
+class QueryParam {
+}
+class Query {
+}
+class EntityManager {
+}
+class Directory {
+}
+class DirectoryReader {
+}
+class Scheduler {
+}
+class Document {
+}
+class Logger {
+}
+class ConnectionHelper {
+}
+class SqlStatementLogger {
+}
+class ServiceRegistry {
+}
+class Statement {
+}
+class Formatter {
+}
+class IndexWriter {
+}
+class CharArraySet {
+}
+class Version {
+}
+class TokenStreamComponents {
+}
+class InputStream {
+}
+class FeedSubscriptionDto {
+}
+class JobEventDto {
+}
+class ResultMapper {
+}
+class EMF {
+}
+
+
+' ============================
+' 4) Key Relationships (from textual descriptions)
+' ============================
+
+'--- PaginatedLists uses PaginatedList, QueryParam, SortCriteria, FilterColumn, ThreadLocalContext
+PaginatedLists --> PaginatedList : creates/uses
+PaginatedLists --> QueryParam : uses
+PaginatedLists --> SortCriteria : uses
+PaginatedLists --> FilterColumn : uses
+PaginatedLists --> ThreadLocalContext : obtains EntityManager?
+
+'--- ArticleDeletedAsyncListener
+ArticleDeletedAsyncListener --> ArticleDeletedAsyncEvent : listens
+ArticleDeletedAsyncListener --> ArticleDao : uses
+
+'--- ArticleUpdatedAsyncListener
+ArticleUpdatedAsyncListener --> ArticleUpdatedAsyncEvent : listens
+ArticleUpdatedAsyncListener --> ArticleDao : uses
+
+'--- RebuildIndexAsyncListener
+RebuildIndexAsyncListener --> RebuildIndexAsyncEvent : listens
+RebuildIndexAsyncListener --> ArticleDao : rebuilds index
+RebuildIndexAsyncListener --> TransactionUtil : uses for transactions
+
+'--- IndexingService
+IndexingService ..> TransactionUtil : uses
+IndexingService ..> ArticleDao : queries
+IndexingService ..> UserArticleDao : user metadata
+IndexingService ..> PaginatedLists : for pagination
+IndexingService ..> RebuildIndexAsyncEvent : triggers?
+
+'--- Category hierarchical
+Category "1" -- "0..*" Category : subcategory
+
+'--- FeedSubscription belongs to Category
+FeedSubscription --> Category : via categoryId
+
+'--- FeedSynchronization relates to Feed
+FeedSynchronization --> Feed : references feedId
+
+'--- FilterCriteria contains FilterColumn
+FilterCriteria --> "1..*" FilterColumn
+
+'--- CategoryDao manages Category
+CategoryDao --> Category
+
+'--- FeedDao manages Feed
+FeedDao --> Feed
+
+'--- FeedSubscriptionDao manages FeedSubscription
+FeedSubscriptionDao --> FeedSubscription
+
+'--- FeedSynchronizationDao manages FeedSynchronization
+FeedSynchronizationDao --> FeedSynchronization
+
+'--- BaseDao uses PaginatedList, PaginatedLists, SortCriteria, FilterCriteria, QueryParam
+BaseDao --> PaginatedList
+BaseDao --> PaginatedLists
+BaseDao --> SortCriteria
+BaseDao --> FilterCriteria
+BaseDao --> QueryParam
+
+'--- ArticleCreatedAsyncListener
+ArticleCreatedAsyncListener --> ArticleCreatedAsyncEvent : listens
+ArticleCreatedAsyncListener --> ArticleDao : uses
+
+'--- LuceneUtil
+LuceneUtil ..> LuceneRunnable : uses
+
+'--- StarredReader
+StarredReader --> StarredArticleImportedListener : sets
+StarredReader --> StarredArticleImportedEvent : triggers?
+
+'--- StarredArticleImportedListener
+StarredArticleImportedListener --> StarredArticleImportedEvent : uses
+
+'--- ThreadLocalContext
+ThreadLocalContext --> EntityManager : holds reference
+
+'--- DbOpenHelper
+DbOpenHelper --> ConnectionHelper
+DbOpenHelper --> SqlStatementLogger
+DbOpenHelper --> ServiceRegistry
+DbOpenHelper --> DialectUtil : applies DB dialect transforms ?
+
+'--- DialectUtil
+DialectUtil ..> EMF : uses ?
+
+'--- FeedSubscriptionMapper
+FeedSubscriptionMapper --> FeedSubscriptionDto : maps
+
+'--- JobEventMapper
+JobEventMapper --> JobEventDto : maps
+
+'--- FeedService
+FeedService --|> AbstractScheduledService : extends?
+FeedService --> FeedDao : uses
+FeedService --> ArticleDao : uses
+FeedService --> RssReader : parses feeds
+FeedService --> UserArticleDao : updates unread
+FeedService --> FeedSynchronizationDao : logs sync
+FeedService --> FaviconUpdateRequestedEvent : triggers
+FeedService --> TransactionUtil : transactions?
+
+
+@enduml
